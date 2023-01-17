@@ -95,7 +95,7 @@ df = pd.DataFrame(columns = column_names)
 not_empty_df = False
 
 # set initial item number (refer to the last created file)
-next_item = 5825
+next_item = 1
 
 # initialize Chrome driver
 driver = initiate_chrome()
