@@ -15,8 +15,9 @@ def initiate_chrome(url, headless = False):
         driver = webdriver.Chrome('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/chromedriver', chrome_options = chrome_options)
     else:
         driver = webdriver.Chrome('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/chromedriver')
-        driver.get(url)
-        driver.maximize_window()
+        
+    driver.get(url)
+    driver.maximize_window()
     
     return driver
 

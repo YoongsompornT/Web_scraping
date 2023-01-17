@@ -20,17 +20,17 @@ df = pd.DataFrame(columns = column_names)
 not_empty_df = False
 
 # set initial item number (refer to the last created file)
-next_item = 1
+next_item = 25
 
 # initialize Chrome driver
 driver = DBD.initiate_chrome(url, headless = False)
 
 # close modal warning
-mdw_close_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "btnWarning")))
+mdw_close_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "btnWarning")))
 mdw_close_button.click()
 
 # find the search box
-search_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "key-word")))
+search_box = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "key-word")))
 search_box.clear()
 search_box.send_keys(Keys.RETURN)
 
