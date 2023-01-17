@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 import pandas as pd
 import time
 
-def initiate_chrome(headless = False):
+def initiate_chrome(url, headless = False):
     if headless:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
@@ -28,6 +28,13 @@ def change_page(page_number):
     current_page.clear()
     current_page.send_keys(page_number)
     current_page.send_keys(Keys.RETURN)
+
+def wait_search_result_to_load(driver):
+    try:    
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[@id="fixTable"]/tbody/tr[1]')))
+    except  TimeoutException:
+        driver.refresh
+        wait_search_result_to_load(driver)
 
 def get_data_and_link_from_search_result(driver, i):
     try:
@@ -98,7 +105,7 @@ not_empty_df = False
 next_item = 1
 
 # initialize Chrome driver
-driver = initiate_chrome()
+driver = initiate_chrome(url, headless = True)
 
 # close modal warning
 mdw_close_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "btnWarning")))
@@ -151,52 +158,47 @@ change_page(page_number)
 
 # loop through the pages
 while page_number <= total_pages:
-    # wait for the list to be loaded
-    try:
-        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[@id="fixTable"]/tbody/tr[1]')))
-        time.sleep(5)
+    wait_search_result_to_load(driver)
 
-        # open each company page in new tab
-        for i in range(1, 11):
-            # skip items before the initial item
-            if initial_page and i < item_number:
-                continue
-            
-            # stop the condition above after finding the initial item
-            initial_page = False
+    # open each company page in new tab
+    for i in range(1, 11):
+        # skip items before the initial item
+        if initial_page and i < item_number:
+            continue
+        
+        # stop the condition above after finding the initial item
+        initial_page = False
 
-            # get data and link from search page
-            company_link, company_tsic, data_from_search_result = get_data_and_link_from_search_result(driver, i)
+        # get data and link from search page
+        company_link, company_tsic, data_from_search_result = get_data_and_link_from_search_result(driver, i)
 
-            # open the new tab
-            driver.execute_script("window.open('');")
-            driver.switch_to.window(driver.window_handles[1])
-            driver.get(company_link)
-            time.sleep(1)
+        # open the new tab
+        driver.execute_script("window.open('');")
+        driver.switch_to.window(driver.window_handles[1])
+        driver.get(company_link)
+        time.sleep(1)
 
-            # get data from company page
-            data_from_company_page = get_data_from_company_page(driver, i)
+        # get data from company page
+        data_from_company_page = get_data_from_company_page(driver, i)
 
-            # if no dataframe or new tsic
-            if not_empty_df and df.iloc[-1, 3] != company_tsic:
-                df.to_csv('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/DBD_by_tsic/TSIC{}.csv'.format(df.iloc[-1, 3]))
-                df = pd.DataFrame(columns = column_names)
-                not_empty_df = False
+        # if no dataframe or new tsic
+        if not_empty_df and df.iloc[-1, 3] != company_tsic:
+            df.to_csv('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/DBD_by_tsic/TSIC{}.csv'.format(df.iloc[-1, 3]))
+            df = pd.DataFrame(columns = column_names)
+            not_empty_df = False
 
-            # add row to dataframe
-            df.loc[len(df.index)] = data_from_search_result + data_from_company_page
-            not_empty_df = True
+        # add row to dataframe
+        df.loc[len(df.index)] = data_from_search_result + data_from_company_page
+        not_empty_df = True
 
-            # close the new tab
-            driver.execute_script("window.close('');")
-            driver.switch_to.window(driver.window_handles[0])
-            time.sleep(1)
+        # close the new tab
+        driver.execute_script("window.close('');")
+        driver.switch_to.window(driver.window_handles[0])
+        time.sleep(1)
 
-        # change page
-        page_number += 1
-        change_page(page_number)
-    except:
-        driver.refresh()
+    # change page
+    page_number += 1
+    change_page(page_number)
 
 # make index start from 1
 df.index += 1
