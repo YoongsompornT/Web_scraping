@@ -1,20 +1,13 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.action_chains import ActionChains
+#from selenium import webdriver
+#from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.options import Options
+#from selenium.webdriver.chrome.options import Options
 import pandas as pd
 import time
-
-def change_page(page_number):
-    current_page = driver.find_element(By.ID, 'cPage')
-    current_page.clear()
-    current_page.send_keys(page_number)
-    current_page.send_keys(Keys.RETURN)
+import DBD_page as DBD
 
 # main website
 url = "https://datawarehouse.dbd.go.th/index"
@@ -27,22 +20,17 @@ df = pd.DataFrame(columns = column_names)
 not_empty_df = False
 
 # set initial item number (refer to the last created file)
-next_item = 5825
+next_item = 18721
 
 # initialize Chrome driver
-##chrome_options = Options()
-##chrome_options.add_argument("--headless")
-##driver = webdriver.Chrome('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/chromedriver', chrome_options = chrome_options)
-driver = webdriver.Chrome('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/chromedriver')
-driver.get(url)
-driver.maximize_window()
+driver = DBD.initiate_chrome(url, headless = False)
 
 # close modal warning
-mdw_close_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "btnWarning")))
+mdw_close_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "btnWarning")))
 mdw_close_button.click()
 
 # find the search box
-search_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "key-word")))
+search_box = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "key-word")))
 search_box.clear()
 search_box.send_keys(Keys.RETURN)
 
@@ -72,7 +60,6 @@ filter_close_button = driver.find_element(By.XPATH, "/html/body/div[3]/button")
 filter_close_button.click()
 
 # sort by tsic
-time.sleep(1)
 sorter = Select(driver.find_element(By.ID, "sortBy"))
 sorter.select_by_value("submitObjCode")
 
@@ -84,84 +71,52 @@ total_pages = int(driver.find_element(By.ID, "sTotalPage").text.replace(',', '')
 page_number = (next_item // 10) + 1
 item_number = next_item  % 10
 initial_page = True
-change_page(page_number)
+DBD.change_page(driver, page_number)
 
 # loop through the pages
 while page_number <= total_pages:
-    # wait for the list to be loaded
-    try:
-        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[@id="fixTable"]/tbody/tr[1]')))
-        time.sleep(5)
+    DBD.wait_search_result_to_load(driver, page_number)
 
-        # open each company page in new tab
-        for i in range(1, 11):
-            # skip items before the initial item
-            if initial_page and i < item_number:
-                continue
-            
-            # stop the condition above after finding the initial item
-            initial_page = False
+    # open each company page in new tab
+    for i in range(1, 11):
+        # skip items before the initial item
+        if initial_page and i < item_number:
+            continue
+        
+        # stop the condition above after finding the initial item
+        initial_page = False
 
-            # get link for each company page
-            company = WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.XPATH, '//*[@id="fixTable"]/tbody/tr[{}]/td[4]/a'.format(i))))
-            company_link = company.get_attribute('href')
-            
-            # store data from search result page
-            company_name = company.text
-            company_order = driver.find_element(By.XPATH, '//*[@id="fixTable"]/tbody/tr[{}]/td[2]/a'.format(i)).text
-            company_id = driver.find_element(By.XPATH, '//*[@id="fixTable"]/tbody/tr[{}]/td[3]/a'.format(i)).text
-            company_tsic = driver.find_element(By.XPATH, '//*[@id="fixTable"]/tbody/tr[{}]/td[7]/a'.format(i)).text
-            company_tsic_typename = driver.find_element(By.XPATH, '//*[@id="fixTable"]/tbody/tr[{}]/td[8]/a'.format(i)).text
+        # get data and link from search page
+        company_link, company_tsic, data_from_search_result = DBD.get_data_and_link_from_search_result(driver, i, page_number)
 
-            # open the new tab
-            driver.execute_script("window.open('');")
-            driver.switch_to.window(driver.window_handles[1])
-            driver.get(company_link)
-            time.sleep(1)
+        # open the new tab
+        driver.execute_script("window.open('');")
+        driver.switch_to.window(driver.window_handles[1])
+        driver.get(company_link)
+        time.sleep(1)
 
-            # store data from each company page
-            company_current_objective  = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[3]/div[2]/div[2]/div/div[4]'))).text
-            company_tsic_at_registration = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[3]/div[2]/div[1]/div/div[2]').text
-            company_objective_at_registration = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[3]/div[2]/div[1]/div/div[4]').text
-            company_type = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[2]').text
-            company_registration_date = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[6]').text
-            company_registration_fund = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[8]').text
-            company_id_old = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[10]').text
-            company_business = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[12]').text
-            company_size = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[14]').text
-            list_company_years_with_submission = driver.find_elements(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[16]/span')
-            company_years_with_submission = ', '.join([year.text for year in list_company_years_with_submission])
-            company_location = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[18]').text
-            company_website = driver.find_element(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[1]/div/div/div/div[20]').text
-            list_company_directors = driver.find_elements(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[2]/div/div/ol/li')
-            company_directors = ', '.join([year.text for year in list_company_directors])
-            list_company_sign_directors = driver.find_elements(By.XPATH, '//*[@id="companyProfileTab1"]/div[2]/div[1]/div[3]/div[1]/div/p')
-            company_sign_directors = ', '.join([year.text for year in list_company_directors])
+        # get data from company page
+        data_from_company_page = DBD.get_data_from_company_page(driver, i, page_number)
 
-            # if no dataframe or new tsic
-            if not_empty_df and df.iloc[-1, 3] != company_tsic:
-                df.to_csv('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/DBD_by_tsic/TSIC{}.csv'.format(df.iloc[-1, 3]))
-                df = pd.DataFrame(columns = column_names)
-                not_empty_df = False
+        # if no dataframe or new tsic
+        if not_empty_df and df.iloc[-1, 3] != company_tsic:
+            df.to_csv('/Users/yoongsomporn.t/Desktop/Projects/Test_WebScraping/DBD_by_tsic/TSIC{}.csv'.format(df.iloc[-1, 3]))
+            df = pd.DataFrame(columns = column_names)
+            not_empty_df = False
 
-            # add row to dataframe
-            df.loc[len(df.index)] = [company_order, company_id, company_name, company_tsic, company_tsic_typename, 
-                                    company_current_objective, company_tsic_at_registration, company_objective_at_registration, 
-                                    company_type, company_registration_date, company_registration_fund, company_id_old, 
-                                    company_business, company_size, company_years_with_submission, company_location, 
-                                    company_website, company_directors, company_sign_directors]
-            not_empty_df = True
+        # add row to dataframe
+        df.loc[len(df.index)] = data_from_search_result + data_from_company_page
+        not_empty_df = True
 
-            # close the new tab
-            driver.execute_script("window.close('');")
-            driver.switch_to.window(driver.window_handles[0])
-            time.sleep(1)
+        # close the new tab
+        driver.execute_script("window.close('');")
+        driver.switch_to.window(driver.window_handles[0])
+        time.sleep(1)
 
-        # change page
-        page_number += 1
-        change_page(page_number)
-    except:
-        driver.refresh()
+    # change page
+    page_number += 1
+    print(f"Change to page {page_number}")
+    DBD.change_page(driver, page_number)
 
 # make index start from 1
 df.index += 1
