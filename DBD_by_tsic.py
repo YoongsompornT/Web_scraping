@@ -1,10 +1,10 @@
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+#from selenium import webdriver
+#from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
+#from selenium.webdriver.chrome.options import Options
 import pandas as pd
 import time
 import DBD_page as DBD
@@ -20,7 +20,7 @@ df = pd.DataFrame(columns = column_names)
 not_empty_df = False
 
 # set initial item number (refer to the last created file)
-next_item = 25
+next_item = 18721
 
 # initialize Chrome driver
 driver = DBD.initiate_chrome(url, headless = False)
@@ -75,7 +75,7 @@ DBD.change_page(driver, page_number)
 
 # loop through the pages
 while page_number <= total_pages:
-    DBD.wait_search_result_to_load(driver)
+    DBD.wait_search_result_to_load(driver, page_number)
 
     # open each company page in new tab
     for i in range(1, 11):
@@ -87,7 +87,7 @@ while page_number <= total_pages:
         initial_page = False
 
         # get data and link from search page
-        company_link, company_tsic, data_from_search_result = DBD.get_data_and_link_from_search_result(driver, i)
+        company_link, company_tsic, data_from_search_result = DBD.get_data_and_link_from_search_result(driver, i, page_number)
 
         # open the new tab
         driver.execute_script("window.open('');")
@@ -96,7 +96,7 @@ while page_number <= total_pages:
         time.sleep(1)
 
         # get data from company page
-        data_from_company_page = DBD.get_data_from_company_page(driver, i)
+        data_from_company_page = DBD.get_data_from_company_page(driver, i, page_number)
 
         # if no dataframe or new tsic
         if not_empty_df and df.iloc[-1, 3] != company_tsic:
@@ -115,6 +115,7 @@ while page_number <= total_pages:
 
     # change page
     page_number += 1
+    print(f"Change to page {page_number}")
     DBD.change_page(driver, page_number)
 
 # make index start from 1
