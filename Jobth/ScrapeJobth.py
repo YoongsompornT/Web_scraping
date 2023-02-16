@@ -81,24 +81,24 @@ class applicant_soup():
 
     def get_all_block_data(self, xpath, type=0):
         xpath = xpath + '/div'
+        return_list = []
         try:
             blocks = self.etobj.xpath(xpath)
             if not type:
                 NotBlock_data = self.get_data(xpath + '[1]')
-                column_names = ['gid', 'ปีที่จบการศึกษา', 'ระดับการศึกษา', 'สถานศึกษา', 'วุฒิการศึกษา', 'สาขาวิชา', 'เกรดเฉลี่ย']
+                #column_names = ['gid', 'ปีที่จบการศึกษา', 'ระดับการศึกษา', 'สถานศึกษา', 'วุฒิการศึกษา', 'สาขาวิชา', 'เกรดเฉลี่ย']
             else:
                 NotBlock_data = self.get_data(xpath + '[1]')
                 NotBlock_data = NotBlock_data[:NotBlock_data.find('ปี')-1]
-                column_names = ['gid', 'ประสบการณ์การทำงาน', 'ปีที่เริ่มทำงาน', 'ปีสุดท้ายที่ทำงาน', 'ตำแหน่ง', 'บริษัท', 'ที่อยู่บริษัท', 'ลักษณะงานที่ทำ']
-            return_df = pd.DataFrame(columns = column_names)
+                #column_names = ['gid', 'ประสบการณ์การทำงาน', 'ปีที่เริ่มทำงาน', 'ปีสุดท้ายที่ทำงาน', 'ตำแหน่ง', 'บริษัท', 'ที่อยู่บริษัท', 'ลักษณะงานที่ทำ']
             for i in range(2,len(blocks)+1):
                 Block_data = self.get_block_data(xpath + f'[{i}]/div', type)
                 data = [self.id] + [NotBlock_data] + Block_data
-                return_df.loc[len(return_df.index)] = data
+                return_list.append(data)
         except:
             pass
             #raise Exception(f"Error at gid={self.id}")
-        return return_df
+        return return_list
 
     def get_all_data(self):
         gender_status = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[1]/div[2]/div[2]')
