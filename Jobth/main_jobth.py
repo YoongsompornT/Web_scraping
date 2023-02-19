@@ -20,7 +20,7 @@ exp_list = []
 JSONlist = []
 
 
-total_pages = 5#search_page.total_pages
+total_pages = search_page.total_pages
 while page_number <= total_pages:
     URL = f'https://www.jobth.com/searchresume2.php?ake={degree_code}&typejob=&gender=&degree=&city=&province=&typeexp=2&exp=&typemoney=3&money=&keyword=&page={page_number}'
     search_page = ScrapeJobth.jobth_soup(URL)
@@ -38,14 +38,14 @@ while page_number <= total_pages:
         output['ประสบการณ์ทำงาน'] = exp_list
         edu_list = []
         exp_list = []
+        JSONlist.append(output)
 
-    JSONlist.append(output)
     print(f'finished page {page_number}')
     page_number += 1
 
 with open('output.json', 'w', encoding ='utf8') as o:
     json.dump(JSONlist, o, ensure_ascii=False, indent=4)
 
-
+print(len(JSONlist))
 print('finished')
 #
