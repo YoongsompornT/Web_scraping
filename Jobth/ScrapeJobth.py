@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 from lxml import etree
 import requests
-import pandas as pd
 
 class jobth_soup():
     def __init__(self, url):
@@ -32,9 +31,11 @@ class jobth_soup():
         for i in range(1, posts+1):
             applicant = self.get_applicant_soup(f'/html/body/center/div[3]/center/div[1]/div[2]/div[{i}]/div[5]/a[1]')
             basic_info = applicant.get_all_data()
-            exp_info = applicant.get_all_block_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[3]/div[2]',1)
-            edu_info = applicant.get_all_block_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[2]/div[2]',0)
-            applicants_list.append([basic_info, edu_info, exp_info])
+            edu_info = applicant.get_all_block_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[2]/div[2]', 'education')
+            exp_info, exp_years = applicant.get_all_block_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[3]/div[2]', 'experience')
+            trn_info = applicant.get_all_block_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[4]/div[2]', 'training')
+            basic_info.append((exp_years))
+            applicants_list.append([basic_info, edu_info, exp_info, trn_info])
         return applicants_list
 
 class applicant_soup():
@@ -56,50 +57,6 @@ class applicant_soup():
         except:
             return ""
 
-    def get_block_data(self, xpath, type=0):
-        return_list = []
-        try:
-            data = self.etobj.xpath(xpath)
-            data_text = list(data[0].itertext())
-            if not type:
-                edu_level = data_text[2]
-                uni = data_text[3]
-                return_list.extend([edu_level, uni])
-            else:
-                start = data_text[0].partition("\xa0\xa0ถึง\xa0\xa0")[0]
-                end = data_text[0].partition("\xa0\xa0ถึง\xa0\xa0")[2]
-                return_list.extend([start, end])
-                data = data[:4] + data[5:]
-                
-            for da in data[1:]:
-                da_text = list(da.itertext())
-                return_list.append(da_text[1])
-        except:
-            pass
-            #raise Exception(f"Error at gid={self.id}")
-        return return_list
-
-    def get_all_block_data(self, xpath, type=0):
-        xpath = xpath + '/div'
-        return_list = []
-        try:
-            blocks = self.etobj.xpath(xpath)
-            if not type:
-                NotBlock_data = self.get_data(xpath + '[1]')
-                #column_names = ['gid', 'ปีที่จบการศึกษา', 'ระดับการศึกษา', 'สถานศึกษา', 'วุฒิการศึกษา', 'สาขาวิชา', 'เกรดเฉลี่ย']
-            else:
-                NotBlock_data = self.get_data(xpath + '[1]')
-                NotBlock_data = NotBlock_data[:NotBlock_data.find('ปี')-1]
-                #column_names = ['gid', 'ประสบการณ์การทำงาน', 'ปีที่เริ่มทำงาน', 'ปีสุดท้ายที่ทำงาน', 'ตำแหน่ง', 'บริษัท', 'ที่อยู่บริษัท', 'ลักษณะงานที่ทำ']
-            for i in range(2,len(blocks)+1):
-                Block_data = self.get_block_data(xpath + f'[{i}]/div', type)
-                data = [self.id] + [NotBlock_data] + Block_data
-                return_list.append(data)
-        except:
-            pass
-            #raise Exception(f"Error at gid={self.id}")
-        return return_list
-
     def get_all_data(self):
         gender_status = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[1]/div[2]/div[2]')
         gender = gender_status[:gender_status.find('(')]
@@ -111,7 +68,8 @@ class applicant_soup():
 
         birth_age = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[1]/div[2]/div[5]')
         birth = birth_age[:birth_age.find('\xa0')]
-        age = int((age_temp:=birth_age.partition('อายุ')[2])[1:age_temp.find('ปี')])
+        age = (age_temp:=birth_age.partition('อายุ')[2])[1:age_temp.find('ปี')]
+        age = int(age) if age!='' else age
         
         height_weight = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[1]/div[2]/div[6]')
         try:
@@ -126,9 +84,13 @@ class applicant_soup():
         military = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[1]/div[2]/div[7]')
 
         residence = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[2]/div[2]/div[2]', multitext=True)
-        province = residence[-2]
-        city_with_parenthesis = residence[-1]
-        city = city_with_parenthesis[city_with_parenthesis.find('(')+1:city_with_parenthesis.find(')')]
+        if len(residence)!=0:
+            province = residence[-2]
+            city_with_parenthesis = residence[-1]
+            city = city_with_parenthesis[city_with_parenthesis.find('(')+1:city_with_parenthesis.find(')')]
+        else:
+            province = ''
+            city = ''
 
         contact_method = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[2]/div[2]/div[6]')
 
@@ -137,6 +99,11 @@ class applicant_soup():
         job_type = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[3]/div[2]/div[2]')
 
         salary = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[3]/div[2]/div[4]')
+        salary = ''.join([n for n in salary if n.isdigit()])
+        try:
+            salary = int(salary)
+        except:
+            salary = -1
 
         last_edit = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[3]/div[2]/div[5]')
         last_login = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[1]/div[3]/div[2]/div[6]')
@@ -145,7 +112,94 @@ class applicant_soup():
 
         graduation_status = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[2]/div[2]/div[1]')
 
+        lang_thai = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[5]/div[2]/div[1]/div[1]')
+        speak_thai = lang_thai[lang_thai.find('พูด')+5:lang_thai.find('\xa0\xa0\xa0อ่าน')-1]
+        read_thai = lang_thai[lang_thai.find('อ่าน')+6:lang_thai.find('\xa0\xa0\xa0เขียน')-1]
+        write_thai = lang_thai[lang_thai.find('เขียน')+7:-1]
+
+        lang_eng = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[5]/div[2]/div[1]/div[2]')
+        speak_eng = lang_eng[lang_eng.find('พูด')+5:lang_eng.find('\xa0\xa0\xa0อ่าน')-1]
+        read_eng = lang_eng[lang_eng.find('อ่าน')+6:lang_eng.find('\xa0\xa0\xa0เขียน')-1]
+        write_eng = lang_eng[lang_eng.find('เขียน')+7:-1]
+
+        lang_skills = [speak_thai, read_thai, write_thai,speak_eng, read_eng, write_eng]
+        lang_score = {'พอใช้':1, 'ดี':2, 'ดีมาก':3}
+
+        for index, skill in enumerate(lang_skills):
+            lang_skills[index] = lang_score[skill]
+
+        typing = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[5]/div[2]/div[2]')
+        typing_thai = typing[typing.find('ไทย')+4:typing.find('คำ/นาที')-1]
+        try:
+            typing_thai = int(typing_thai)
+        except:
+            typing_thai = -1
+        typing_eng = typing[typing.find('อังกฤษ')+7:-8]
+        try:
+            typing_eng = int(typing_eng)
+        except:
+            typing_eng = -1
+
+        driving = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[5]/div[2]/div[3]')
+        vehicle = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[5]/div[2]/div[4]')
+        others = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[5]/div[2]/div[5]')
+
+        projects = self.get_data('/html/body/center/div[3]/center/div[3]/div/div[2]/div[6]/div[2]/div[1]')
+
         return_list = [self.id, gender, marital_status, nationality, religion, birth, age, height, weight, military, province,
-                    city, contact_method, degree, job_type, salary, last_edit, last_login, job_title, graduation_status]
+                    city, contact_method, degree, job_type, salary, last_edit, last_login, job_title, graduation_status, 
+                    *lang_skills[:3], typing_thai, *lang_skills[3:], typing_eng, driving, vehicle, others, projects]
         
         return return_list
+    
+    def get_block_data(self, xpath, type):
+        return_list = []
+        try:
+            data = self.etobj.xpath(xpath)
+            data_text = list(data[0].itertext())
+            if type == 'education':
+                edu_level = data_text[2]
+                uni = data_text[3]
+                return_list.extend([edu_level, uni])
+            else:
+                start = data_text[0].partition("\xa0\xa0ถึง\xa0\xa0")[0]
+                end = data_text[0].partition("\xa0\xa0ถึง\xa0\xa0")[2]
+                return_list.extend([start, end])
+                if type == 'experience':
+                    data = data[:4] + data[5:]
+            for da in data[1:]:
+                da_text = list(da.itertext())
+                return_list.append(da_text[1])
+        except:
+            pass
+            #raise Exception(f"Error at gid={self.id}")
+        return return_list
+
+    def get_all_block_data(self, xpath, type):
+        xpath = xpath + '/div'
+        return_list = []
+        try:
+            blocks = self.etobj.xpath(xpath)
+            #if not type:
+                #NotBlock_data = self.get_data(xpath + '[1]')
+                #column_names = ['gid', 'ปีที่จบการศึกษา', 'ระดับการศึกษา', 'สถานศึกษา', 'วุฒิการศึกษา', 'สาขาวิชา', 'เกรดเฉลี่ย']
+            #else:
+                #NotBlock_data = self.get_data(xpath + '[1]')
+                #NotBlock_data = NotBlock_data[:NotBlock_data.find('ปี')-1]
+                #column_names = ['gid', 'ประสบการณ์การทำงาน', 'ปีที่เริ่มทำงาน', 'ปีสุดท้ายที่ทำงาน', 'ตำแหน่ง', 'บริษัท', 'ที่อยู่บริษัท', 'ลักษณะงานที่ทำ']
+            for i in range(2,len(blocks)+1):
+                Block_data = self.get_block_data(xpath + f'[{i}]/div', type)
+                #data = [self.id] + [NotBlock_data] + Block_data
+                #return_list.append(data)
+                return_list.append(Block_data)
+            if type == 'experience':
+                NotBlock_data = self.get_data(xpath + '[1]')
+                NotBlock_data = NotBlock_data[:NotBlock_data.find('ปี')-1]
+                NotBlock_data = int(NotBlock_data) if NotBlock_data!='' else 0
+                return return_list, NotBlock_data
+        except:
+            pass
+            #raise Exception(f"Error at gid={self.id}")
+        return return_list
+    # check if can return NotBlock_data in order to add it to the main dict of the applicant
+    
