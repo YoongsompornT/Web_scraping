@@ -32,7 +32,7 @@ trn_list = []
 JSONlist = []
 
 
-total_pages = 3#search_page.total_pages
+total_pages = search_page.total_pages
 while page_number <= total_pages:
     URL = f'https://www.jobth.com/searchresume2.php?ake={degree_code}&typejob=&gender=&degree=&city=&province=&typeexp=2&exp=&typemoney=3&money=&keyword=&page={page_number}'
     search_page = ScrapeJobth.jobth_soup(URL)
