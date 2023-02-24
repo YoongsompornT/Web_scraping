@@ -1,7 +1,7 @@
 import json
 import ScrapeJobth 
 
-degree_code = '0035'   # from 0001 to 0042
+degree_code = '0028'   # from 0001 to 0042
 page_number = 1
 URL = f'https://www.jobth.com/searchresume2.php?ake={degree_code}&typejob=&gender=&degree=&city=&province=&typeexp=2&exp=&typemoney=3&money=&keyword=&page={page_number}'
 

@@ -123,7 +123,7 @@ class applicant_soup():
         write_eng = lang_eng[lang_eng.find('เขียน')+7:-1]
 
         lang_skills = [speak_thai, read_thai, write_thai,speak_eng, read_eng, write_eng]
-        lang_score = {'พอใช้':1, 'ดี':2, 'ดีมาก':3}
+        lang_score = {'พอใช้':1, 'ดี':2, 'ดีมาก':3, '':-1}
 
         for index, skill in enumerate(lang_skills):
             lang_skills[index] = lang_score[skill]
@@ -195,7 +195,10 @@ class applicant_soup():
             if type == 'experience':
                 NotBlock_data = self.get_data(xpath + '[1]')
                 NotBlock_data = NotBlock_data[:NotBlock_data.find('ปี')-1]
-                NotBlock_data = int(NotBlock_data) if NotBlock_data!='' else 0
+                try:
+                    NotBlock_data = int(NotBlock_data)
+                except:
+                    NotBlock_data = 0
                 return return_list, NotBlock_data
         except:
             pass
